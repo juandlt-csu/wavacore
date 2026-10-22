@@ -13,8 +13,12 @@
 # clone itself is not touched), links the playground's `data` folder into it,
 # sources setup.R there as the old workflow did (about 70 packages plus every
 # file in src/), and runs each case in golden_cases.R. It writes one
-# golden/<id>.rds per case and golden/golden_info.txt saying where they came
-# from.
+# golden/<id>.rds per case, golden/golden_info.txt saying where they came from,
+# and golden/golden_env.csv (R and package versions, checksums of the data
+# files) for test-golden.R to compare against when a case fails.
+#
+# Everything is written to a temporary folder first. golden/ is replaced only
+# if every case ran, so a failed run leaves the old golden files as they were.
 #
 # This baseline is for checking the move out of the playground. Once
 # development has moved off the playground, it is no longer the reference.
@@ -25,11 +29,13 @@
 golden_commit <- "b62f366"
 
 args <- commandArgs(trailingOnly = TRUE)
-old_repo <- normalizePath(if (length(args) > 0) args[1] else "../nps_water_vulnerability",
+old_repo <- normalizePath(
+  if (length(args) > 0) args[1] else "../nps_water_vulnerability",
+  mustWork = TRUE
+)
+fixtures <- normalizePath(file.path("tests", "testthat", "fixtures"),
                           mustWork = TRUE)
-fixtures <- normalizePath(file.path("tests", "testthat", "fixtures"), mustWork = TRUE)
 golden_dir <- file.path(fixtures, "golden")
-dir.create(golden_dir, showWarnings = FALSE)
 
 if ("wavacore" %in% loadedNamespaces()) {
   stop("wavacore is loaded; run this in a fresh R session")
@@ -59,6 +65,10 @@ utils::untar(archive, exdir = old_code)
 file.symlink(normalizePath(file.path(old_repo, "data")),
              file.path(old_code, "data"))
 
+# the new golden files go here until every case has run
+out_dir <- tempfile("golden_out_")
+dir.create(out_dir)
+
 setwd(old_code)
 source("setup.R")
 
@@ -66,15 +76,12 @@ source(file.path(fixtures, "golden_cases.R"))
 
 info <- c(
   paste("Written:", format(Sys.time(), "%Y-%m-%d %H:%M %Z")),
-  paste("Old code: nps_water_vulnerability", golden_commit,
+  paste("Old code: nps_water_vulnerability", golden_commit_full,
         "(pinned; setup.R and src/ extracted from that commit)"),
   paste("Playground clone was on:", clone_head, "(not used for the code)"),
   paste("Data folder:", normalizePath("data")),
   paste("R:", R.version.string),
-  paste0("Packages: ", paste(sapply(c("sf", "dplyr", "tidyr", "readxl", "janitor",
-                                      "tigris", "igraph", "httr", "jsonlite", "readr"),
-                                    function(p) paste(p, packageVersion(p))),
-                             collapse = ", ")),
+  "Package versions and data file checksums: golden_env.csv",
   ""
 )
 
@@ -86,13 +93,41 @@ for (case in golden_cases) {
     warning = function(w) {
       warns <<- c(warns, conditionMessage(w))
       invokeRestart("muffleWarning")
+    },
+    error = function(e) {
+      message(case$id, " failed, so golden/ was not changed")
     }
   )
-  saveRDS(value, file.path(golden_dir, paste0(case$id, ".rds")))
+  saveRDS(value, file.path(out_dir, paste0(case$id, ".rds")))
+  warn_text <- if (length(warns) > 0) {
+    paste0(": ", paste(unique(warns), collapse = " | "))
+  } else {
+    ""
+  }
   info <- c(info, sprintf("%s: %s, %d rows, %d warning(s)%s",
-                          case$id, class(value)[1], NROW(value), length(warns),
-                          if (length(warns) > 0) paste0(": ", paste(unique(warns), collapse = " | ")) else ""))
+                          case$id, class(value)[1], NROW(value),
+                          length(warns), warn_text))
 }
 
-writeLines(info, file.path(golden_dir, "golden_info.txt"))
+writeLines(info, file.path(out_dir, "golden_info.txt"))
+
+# Recorded after the cases ran, so packages they loaded are included
+packages <- sort(loadedNamespaces())
+env <- rbind(
+  data.frame(item = "R", name = "R", value = as.character(getRversion())),
+  data.frame(item = "package", name = packages,
+             value = vapply(packages, function(p) {
+               as.character(utils::packageVersion(p))
+             }, character(1))),
+  data.frame(item = "data file", name = golden_data_files,
+             value = unname(tools::md5sum(file.path("data",
+                                                     golden_data_files))))
+)
+utils::write.csv(env, file.path(out_dir, "golden_env.csv"), row.names = FALSE)
+
+# Every case ran: replace the old golden files with the new ones
+unlink(list.files(golden_dir, full.names = TRUE))
+dir.create(golden_dir, showWarnings = FALSE)
+copied <- file.copy(list.files(out_dir, full.names = TRUE), golden_dir)
+if (!all(copied)) stop("could not copy the golden files into ", golden_dir)
 message("Golden files written to ", golden_dir)

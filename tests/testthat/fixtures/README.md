@@ -20,11 +20,16 @@ baseline.
 ## Files
 
 - `golden_cases.R`: the calls to compare (function, arguments, and whether
-  they need the shared data folder or internet).
+  they need the shared data folder or internet), and the data files those
+  calls read. It checks the fields of every case when it is sourced, so a typo
+  stops with an error instead of silently dropping a skip.
 - `make_golden.R`: runs those calls with the old code at `b62f366` and saves
   the results to `golden/<id>.rds`, plus `golden/golden_info.txt` (date, the
-  pinned commit, the commit the clone was on, package versions, row and warning
-  counts).
+  pinned commit, the commit the clone was on, the data folder, row and warning
+  counts) and `golden/golden_env.csv` (R and every package version, and a
+  checksum of each data file). It writes to a temporary folder first and
+  replaces `golden/` only if every case ran, so a failed run (e.g. a service
+  is down) leaves the old golden files as they were.
 - `golden/`: the saved results. Not in git for now; whether the outputs can go
   in this public repo is an open question for the team.
 
@@ -61,7 +66,17 @@ API) is not skipped: the case errors with the HTTP error, so an outage is
 never mistaken for a pass. That is an error, not a mismatch.
 
 If a test fails, don't regenerate the golden file or loosen the comparison:
-find out why the output changed first. Some cases download live data (park
-boundaries, state boundaries, visitation), so a failure can come from the
-source changing rather than the code; `golden_info.txt` says when the golden
-files were made.
+find out why the output changed first. A failure can come from wavacore, or
+from something else that changed since the golden run: an R or package
+upgrade, an edit to the shared database, or a live source (park boundaries,
+state boundaries, visitation). The failure message lists the R, package and
+data file changes it finds against `golden_env.csv`, and names the download if
+the case has one. To find the cause:
+
+1. Run `make_golden.R` from a scratch copy of wavacore (so the real `golden/`
+   stays as it is) to rebuild the golden files with today's packages, data and
+   downloads.
+2. Compare the fresh files with the saved ones (`identical()`).
+3. If they are identical, the old code still gives the saved output, so the
+   change is in wavacore. If they differ, the change came from packages, data
+   or a download, not from wavacore.

@@ -54,3 +54,36 @@ golden_cases <- list(
        needs = "internet",
        downloads = "the full NPS visitation dataset (irmaservices.nps.gov)")
 )
+
+# Files in the shared data folder that the "data" cases read. make_golden.R
+# records their checksums, and test-golden.R reports it when one has changed.
+golden_data_files <- file.path("Water_Supply_Systems",
+                               "NPS_Water_Systems_Database_Joined.xlsx")
+
+# Check the fields of every case, so a typo (e.g. `need = "data"`) stops here
+# instead of silently dropping a skip.
+local({
+  for (case in golden_cases) {
+    id <- if (is.character(case$id) && length(case$id) == 1) case$id else "?"
+    bad <- function(...) stop("golden case ", id, ": ", ..., call. = FALSE)
+    extra <- setdiff(names(case), c("id", "fun", "args", "needs", "downloads"))
+    if (length(extra) > 0) bad("unknown field(s) ", toString(extra))
+    if (id == "?") bad("`id` must be one string")
+    if (!is.character(case$fun) || length(case$fun) != 1) {
+      bad("`fun` must be one function name")
+    }
+    if (!is.list(case$args)) bad("`args` must be a list")
+    if (!is.null(case$needs) && !all(case$needs %in% c("data", "internet"))) {
+      bad("`needs` must be \"data\", \"internet\" or both")
+    }
+    if ("internet" %in% case$needs &&
+        !(is.character(case$downloads) && length(case$downloads) == 1)) {
+      bad("an \"internet\" case needs `downloads` (what it fetches)")
+    }
+  }
+  ids <- vapply(golden_cases, function(case) case$id, character(1))
+  if (anyDuplicated(ids)) {
+    stop("golden case ids must be unique: ", toString(ids[duplicated(ids)]),
+         call. = FALSE)
+  }
+})
