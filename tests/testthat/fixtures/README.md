@@ -24,9 +24,22 @@ To run the comparison, point wavacore at the same data folder the playground's
 WAVA_DATA_DIR="/path/to/shared/data" Rscript -e 'devtools::test(filter = "golden")'
 ```
 
-The comparison is `expect_identical()`. Tests skip when a golden file is
-missing, when the data folder isn't available, or offline. `R CMD check` skips
-them too, because `golden/` is in `.Rbuildignore`.
+The comparison is `expect_identical()`. Every skip says which case it is and
+what is missing:
+
+- no golden files at all: one skip for the whole file, saying to run
+  `make_golden.R` (this is what `R CMD check` shows, because `golden/` is in
+  `.Rbuildignore`);
+- one golden file missing: `<case>: golden file missing: <path>`;
+- no data folder: `<case>: no Water_Supply_Systems folder in the data folder
+  "<path>"`, plus whether it came from the option, `WAVA_DATA_DIR`, or the
+  `"data"` fallback;
+- offline: `<case>: offline; this case downloads <what>` (the `downloads`
+  field in `golden_cases.R`).
+
+A service that is down while the machine is online (e.g. the NPS visitation
+API) is not skipped: the case errors with the HTTP error, so an outage is
+never mistaken for a pass. That is an error, not a mismatch.
 
 If a test fails, don't regenerate the golden file or loosen the comparison:
 find out why the output changed first. Some cases download live data (park

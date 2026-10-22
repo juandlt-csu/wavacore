@@ -6,6 +6,7 @@
 # `args` must work with both the old and the new function, so it can't use
 # arguments added in wavacore (such as get_wsd()'s `path`).
 # `needs`: "data" = the shared WaVA data folder, "internet" = a live download.
+# `downloads`: what an "internet" case fetches, named in its skip reason.
 
 golden_cases <- list(
   list(id = "get_wsd_defaults",
@@ -24,26 +25,32 @@ golden_cases <- list(
   list(id = "get_wsd_rapid",
        fun = "get_wsd",
        args = list(rapid = TRUE),
-       needs = c("data", "internet")),
+       needs = c("data", "internet"),
+       downloads = "NPS park boundaries (NPS Data Store) and US state boundaries (tigris)"),
   list(id = "get_wsd_fill_all_states",
        fun = "get_wsd",
        args = list(fill_empty_coords = TRUE, conus = FALSE),
-       needs = c("data", "internet")),
+       needs = c("data", "internet"),
+       downloads = "NPS park boundaries (NPS Data Store) and US state boundaries (tigris)"),
   list(id = "getParkSystem",
        fun = "getParkSystem",
        args = list(),
-       needs = "internet"),
+       needs = "internet",
+       downloads = "NPS park boundaries (NPS Data Store)"),
   list(id = "getParkBoundary_two_parks",
        fun = "getParkBoundary",
        args = list(park = c("ROMO", "ZION")),
-       needs = "internet"),
+       needs = "internet",
+       downloads = "NPS park boundaries (NPS Data Store)"),
   list(id = "getUnitVisitation_api",
        fun = "getUnitVisitation",
        args = list(units = c("ROMO", "ZION"), startYear = 2015, endYear = 2020),
-       needs = "internet"),
+       needs = "internet",
+       downloads = "visitation from the NPS STATS API (irmaservices.nps.gov)"),
   list(id = "getUnitVisitation_allStats",
        fun = "getUnitVisitation",
        args = list(units = c("ROMO", "ZION"), startYear = 2015, endYear = 2020,
                    allStats = TRUE),
-       needs = "internet")
+       needs = "internet",
+       downloads = "the full NPS visitation dataset (irmaservices.nps.gov)")
 )
