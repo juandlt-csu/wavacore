@@ -7,7 +7,8 @@ test_that("get_wsd() returns water supplies with the expected columns", {
   wsd_file <- wava_data_path("Water_Supply_Systems",
                              "NPS_Water_Systems_Database_Joined.xlsx")
   testthat::skip_if_not(file.exists(wsd_file),
-                        "shared WaVA data folder not available")
+                        paste0("no water supply database at \"", wsd_file,
+                               "\" (data folder: ", data_dir_source(), ")"))
 
   wsd <- get_wsd(rapid = TRUE)
 

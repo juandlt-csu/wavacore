@@ -18,15 +18,8 @@ if (length(list.files(golden_dir, pattern = "\\.rds$")) == 0) {
 }
 
 data_folder_reason <- function(id) {
-  source <- if (!is.null(getOption("wava.data_dir"))) {
-    "set by options(wava.data_dir)"
-  } else if (nzchar(Sys.getenv("WAVA_DATA_DIR"))) {
-    "set by WAVA_DATA_DIR"
-  } else {
-    "WAVA_DATA_DIR is not set, so it is \"data\" in the working directory"
-  }
   paste0(id, ": no Water_Supply_Systems folder in the data folder \"",
-         wava_data_dir(), "\" (", source, ")")
+         wava_data_dir(), "\" (", data_dir_source(), ")")
 }
 
 for (case in golden_cases) {
