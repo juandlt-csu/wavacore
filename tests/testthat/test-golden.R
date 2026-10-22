@@ -1,5 +1,6 @@
 # Compare wavacore with golden outputs saved from the old code in
-# nps_water_vulnerability (see fixtures/README.md). A failure means wavacore no
+# nps_water_vulnerability at the pinned commit b62f366, the playground when
+# wavacore was split out (see fixtures/README.md). A failure means wavacore no
 # longer returns exactly what the old code did. Report it; don't regenerate the
 # golden file or loosen the comparison to make it pass.
 #

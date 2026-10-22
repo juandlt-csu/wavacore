@@ -1,17 +1,36 @@
 # Golden test fixtures
 
 `test-golden.R` checks that wavacore returns exactly what the old code in
-`nps_water_vulnerability` returned before the split (commit `b62f366`).
+`nps_water_vulnerability` returned before the split.
+
+## The baseline: `nps_water_vulnerability` at `b62f366`
+
+We chose one commit of the playground as the reference: `b62f366`, its
+`upstream/main` when wavacore was split out (2026-10-20). The golden files
+always come from that commit, even after the playground changes.
+`make_golden.R` extracts `setup.R` and `src/` from that commit with
+`git archive`, whatever the local clone is on. The commit is set in one place,
+`golden_commit` at the top of `make_golden.R`.
+
+This is a temporary arrangement for checking the move out of the playground.
+Once development has moved off the playground, `b62f366` stops being the
+reference, and these tests either retire or become wavacore's own regression
+baseline.
+
+## Files
 
 - `golden_cases.R`: the calls to compare (function, arguments, and whether
   they need the shared data folder or internet).
-- `make_golden.R`: runs those calls with the old code and saves the results to
-  `golden/<id>.rds`, plus `golden/golden_info.txt` (date, old commit, package
-  versions, row and warning counts).
+- `make_golden.R`: runs those calls with the old code at `b62f366` and saves
+  the results to `golden/<id>.rds`, plus `golden/golden_info.txt` (date, the
+  pinned commit, the commit the clone was on, package versions, row and warning
+  counts).
 - `golden/`: the saved results. Not in git for now; whether the outputs can go
   in this public repo is an open question for the team.
 
-To create the golden files, from the wavacore repo root in a fresh R session:
+To create the golden files, from the wavacore repo root in a fresh R session
+(the clone needs commit `b62f366` and its `data` link; the script doesn't
+change the clone):
 
 ```sh
 Rscript tests/testthat/fixtures/make_golden.R ../nps_water_vulnerability
